@@ -7,6 +7,7 @@ using System.IO;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using System.Xml;
 using System.Xml.Linq;
 
 namespace GpxParser
@@ -15,17 +16,20 @@ namespace GpxParser
     {
         static void Main(string[] args)
         {
-            var folder = @"C:\Users\KeithF\Downloads\Cruise\20180616081240";
+            var folder = @"Data";
 
-            var points = string.Join(
-                Environment.NewLine,
-                Directory.GetFiles(folder, "*.gpx")
-                    .Select(file => GpxFile.Parse(file).Track)
-                    .SelectMany(trk => trk.Segments)
-                    .SelectMany(seg => seg.Points)
-                    .OrderBy(pt => pt.Time)
-                    .Select(pt => pt.ToXml()));
-                
+            var points = Directory.GetFiles(folder, "*.gpx")
+                .Select(file => GpxFile.Parse(file).Track)
+                .SelectMany(trk => trk.Segments)
+                .SelectMany(seg => seg.Points)
+                .OrderBy(pt => pt.Time)
+                .ToList();
+
+            var gpx = new GpxFile("1.0", "me");
+            gpx.Track.Segments.First().Points.AddRange(points);
+
+            using (var writer = new XmlTextWriter("blah.gpx", Encoding.UTF8))
+                gpx.Write(writer);
 
             // "<?xml version=\"1.0\" encoding=\"UTF-8\" ?><gpx version=\"1.0\" creator="GPSLogger 95 - http://gpslogger.mendhak.com/" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns="http://www.topografix.com/GPX/1/0" xsi:schemaLocation="http://www.topografix.com/GPX/1/0 http://www.topografix.com/GPX/1/0/gpx.xsd"><trk><trkseg>
 
@@ -48,6 +52,14 @@ namespace GpxParser
         [DebuggerDisplay("{DisplayString}")]
         public class GpxFile
         {
+            public GpxFile(string version, string creator)
+            {
+                Version = version;
+                Creator = creator;
+                Track = new Track();
+                Track.Segments.Add(new TrackSegment());
+            }
+
             private GpxFile(string fileName, string version, string creator)
             {
                 FileName = fileName;
@@ -104,6 +116,55 @@ namespace GpxParser
                 }
             }
 
+            /*
+            <gpx xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns="http://www.topografix.com/GPX/1/0" version="1.0" creator="GPSLogger 95 - http://gpslogger.mendhak.com/" xsi:schemaLocation="http://www.topografix.com/GPX/1/0 http://www.topografix.com/GPX/1/0/gpx.xsd">
+                <time>2018-06-15T20:30:08.000Z</time>
+                <wpt lat="-35.85023469" lon="176.09368066">
+                <ele>43.0</ele>
+                <time>2018-06-15T21:34:20.000Z</time>
+                <name>cruise</name>
+                <src>gps</src>
+                </wpt>
+                <trk>
+                    <trkseg>
+                        <trkpt lat="-35.87565128" lon="176.03435941">
+                            <ele>33.0</ele>
+                            <time>2018-06-15T20:30:08.000Z</time>
+                            <speed>0.0</speed>
+                            <src>gps</src>
+                        </trkpt>
+                        <trkpt lat="-35.86621741" lon="176.03906712">
+                            <ele>-11.0</ele>
+                            <time>2018-06-15T20:47:57.000Z</time>
+                            <speed>0.0</speed>
+                            <geoidheight>40.0</geoidheight>
+                            <src>gps</src>
+                            <hdop>2.0</hdop>
+                            <vdop>0.9</vdop>
+                            <pdop>2.2</pdop>
+                        </trkpt>
+                    </trkseg>
+                </trk>
+            </gpx>
+
+            */
+
+            public void Write(XmlWriter writer)
+            {
+                writer.WriteStartDocument();
+                writer.WriteStartElement(_gpx);
+                writer.WriteAttribute(_version, Version);
+                writer.WriteAttribute(_creator, Creator);
+                //if (Waypoint != null)
+                //    Waypoint.Write(writer);
+                //if (Route != null)
+                //    Route.Write(writer);
+                if (Track != null)
+                    Track.Write(writer);
+                writer.WriteEndElement();
+                writer.WriteEndDocument();
+            }
+
             string DisplayString => Path.GetFileName(FileName);
             string _displayString;
 
@@ -112,14 +173,14 @@ namespace GpxParser
             static readonly XName _creator = "creator";
             static readonly XName _wpt = _topoNs + "wpt";
             static readonly XName _rte = _topoNs + "rte";
-            static readonly XName _trk = _topoNs + "trk";
+            static readonly XName _trk = Track._trk;
         }
         #endregion GpxFile
 
         #region Track
         public class Track
         {
-            private Track()
+            internal Track()
             { }
 
             public string Name { get; private set; }
@@ -127,7 +188,7 @@ namespace GpxParser
             public string Description { get; private set; }
             public string Source { get; private set; }
             public Link Link { get; private set; }
-            public int Number { get; private set; }
+            public int? Number { get; private set; }
             public string Type { get; private set; }
             public List<TrackSegment> Segments { get; } = new List<TrackSegment>();
 
@@ -163,7 +224,30 @@ namespace GpxParser
                 return trk;
             }
 
-            static readonly XName _trkseg = _topoNs + "trkseg";
+            public void Write(XmlWriter writer)
+            {
+                writer.WriteStartElement(_trk);
+                if (!string.IsNullOrWhiteSpace(Name))
+                    writer.WriteElement(_name, Name);
+                if (!string.IsNullOrWhiteSpace(Comment))
+                    writer.WriteElement(_cmt, Comment);
+                if (!string.IsNullOrWhiteSpace(Description))
+                    writer.WriteElement(_desc, Description);
+                if (!string.IsNullOrWhiteSpace(Source))
+                    writer.WriteElement(_src, Source);
+                if (Link != null)
+                    Link.Write(writer);
+                if (Number.HasValue)
+                    writer.WriteElement(_number, Number.Value);
+                if (!string.IsNullOrWhiteSpace(Type))
+                    writer.WriteElement(_type, Type);
+                foreach (var trkseg in Segments)
+                    trkseg.Write(writer);
+                writer.WriteEndElement();
+            }
+
+            internal static readonly XName _trk = _topoNs + "trk";
+            static readonly XName _trkseg = TrackSegment._trkseg;
             static readonly XName _name = _topoNs + "name";
             static readonly XName _cmt = _topoNs + "cmt";
             static readonly XName _desc = _topoNs + "desc";
@@ -177,7 +261,7 @@ namespace GpxParser
         #region TrackSegment
         public class TrackSegment
         {
-            private TrackSegment()
+            internal TrackSegment()
             { }
 
             public List<TrackPoint> Points { get; } = new List<TrackPoint>();
@@ -199,7 +283,16 @@ namespace GpxParser
                 return trkSeg;
             }
 
-            static readonly XName _trkpt = _topoNs + "trkpt";
+            public void Write(XmlWriter writer)
+            {
+                writer.WriteStartElement(_trkseg);
+                foreach (var trkpt in Points)
+                    trkpt.Write(writer);
+                writer.WriteEndElement();
+            }
+
+            internal static readonly XName _trkseg = _topoNs + "trkseg";
+            static readonly XName _trkpt = TrackPoint._trkpt;
         }
         #endregion TrackSegment
 
@@ -313,41 +406,40 @@ namespace GpxParser
                 return trkPt;
             }
 
-            public string ToXml()
+            public void Write(XmlWriter writer)
             {
-                var sb = new StringBuilder();
-                sb.Append($"<trkpt lat=\"{Latitude}\" lon=\"{Latitude}\">");
+                writer.WriteStartElement(_trkpt);
+                writer.WriteAttribute(_lat, Latitude);
+                writer.WriteAttribute(_lon, Longitude);
                 if (Elevation.HasValue)
-                    sb.Append($"<ele>{Elevation.Value}</ele>");
+                    writer.WriteElement(_ele, Elevation);
                 if (Time.HasValue)
-                    sb.Append($"<time>{Time.Value.ToString("yyyy-MM-dd")}T{Time.Value.ToString("HH:mm:ss.fff")}Z</time>");
+                    writer.WriteElement(_time, Time);
                 if (MagneticVariation.HasValue)
-                    sb.Append($"<magvar>{MagneticVariation.Value}</magvar>");
+                    writer.WriteElement(_magvar, MagneticVariation);
                 if (GeoidHeight.HasValue)
-                    sb.Append($"<geoidheight>{GeoidHeight.Value}</geoidheight>");
+                    writer.WriteElement(_geoidheight, GeoidHeight);
                 if (!string.IsNullOrWhiteSpace(Name))
-                    sb.Append($"<name>{Name}</name>");
+                    writer.WriteElement(_name, Name);
                 if (!string.IsNullOrWhiteSpace(Comment))
-                    sb.Append($"<cmt>{Comment}</cmt>");
+                    writer.WriteElement(_cmt, Comment);
                 if (!string.IsNullOrWhiteSpace(Description))
-                    sb.Append($"<desc>{Description}</desc>");
+                    writer.WriteElement(_desc, Description);
                 if (!string.IsNullOrWhiteSpace(Source))
-                    sb.Append($"<src>{Source}</src>");
+                    writer.WriteElement(_src, Source);
                 if (Link != null)
-                    sb.Append(Link.ToXml());
+                    Link.Write(writer);
                 if (!string.IsNullOrWhiteSpace(SymbolName))
-                    sb.Append($"<sym>{SymbolName}</sym>");
+                    writer.WriteElement(_sym, SymbolName);
                 if (!string.IsNullOrWhiteSpace(Type))
-                    sb.Append($"<type>{Type}</type>");
-                sb.Append($"</trkpt>");
-                return sb.ToString();
+                    writer.WriteElement(_type, Type);
+                writer.WriteEndElement();
             }
-
-            //<trkpt lat = "-36.15281608" lon="176.38007741"><ele>49.0</ele><time>2018-06-16T15:43:20.000Z</time><course>352.7</course><speed>1.24</speed><src>gps</src></trkpt>
 
             string DisplayString => _displayString;
             string _displayString;
 
+            internal static readonly XName _trkpt = _topoNs + "trkpt";
             static readonly XName _lat = "lat";
             static readonly XName _lon = "lon";
             static readonly XName _ele = _topoNs + "ele";
@@ -359,7 +451,7 @@ namespace GpxParser
             static readonly XName _cmt = _topoNs + "cmt";
             static readonly XName _desc = _topoNs + "desc";
             static readonly XName _src = _topoNs + "src";
-            static readonly XName _link = _topoNs + "link";
+            static readonly XName _link = Link._link;
             static readonly XName _sym = _topoNs + "sym";
             static readonly XName _type = _topoNs + "type";
 
@@ -417,21 +509,21 @@ namespace GpxParser
                 return link;
             }
 
-            public string ToXml()
+            public void Write(XmlWriter writer)
             {
-                var sb = new StringBuilder();
-                sb.Append($"<link href=\"{Url}\">");
+                writer.WriteStartElement(_link);
+                writer.WriteAttribute(_href, Url);
                 if (!string.IsNullOrWhiteSpace(Text))
-                    sb.Append($"<text>{Text}</text>");
+                    writer.WriteElement(_text, Text);
                 if (!string.IsNullOrWhiteSpace(Type))
-                    sb.Append($"<type>{Type}</type>");
-                sb.Append($"</link>");
-                return sb.ToString();
+                    writer.WriteElement(_type, Type);
+                writer.WriteEndElement();
             }
 
             string DisplayString => _displayString;
             string _displayString;
 
+            internal static readonly XName _link = _topoNs + "link";
             static readonly XName _href = "href";
             static readonly XName _text = _topoNs + "text";
             static readonly XName _type = _topoNs + "type";

@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using System.Xml;
 using System.Xml.Linq;
 
 namespace GpxParser
@@ -46,6 +47,28 @@ namespace GpxParser
                 return false;
             value = child.Value;
             return true;
+        }
+    }
+
+    internal static class XmlWriterExtensions
+    {
+        public static void WriteAttribute<T>(this XmlWriter writer, XName name, T value)
+        {
+            writer.WriteStartAttribute(name.LocalName, name.NamespaceName);
+            writer.WriteValue(value);
+            writer.WriteEndAttribute();
+        }
+
+        public static void WriteElement<T>(this XmlWriter writer, XName name, T value)
+        {
+            writer.WriteStartElement(name.LocalName, name.NamespaceName);
+            writer.WriteValue(value);
+            writer.WriteEndElement();
+        }
+
+        public static void WriteStartElement(this XmlWriter writer, XName name)
+        {
+            writer.WriteStartElement(name.LocalName, name.NamespaceName);
         }
     }
 }
