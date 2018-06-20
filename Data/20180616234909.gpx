@@ -1,0 +1,4 @@
+<?xml version="1.0" encoding="UTF-8" ?><gpx version="1.0" creator="GPSLogger 95 - http://gpslogger.mendhak.com/" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns="http://www.topografix.com/GPX/1/0" xsi:schemaLocation="http://www.topografix.com/GPX/1/0 http://www.topografix.com/GPX/1/0/gpx.xsd"><time>2018-06-16T11:58:06.000Z</time><trk><trkseg><trkpt lat="-36.23813108" lon="176.31017335"><ele>33.0</ele><time>2018-06-16T11:58:06.000Z</time><course>56.1</course><speed>0.83</speed><src>gps</src></trkpt>
+<trkpt lat="-36.23499463" lon="176.31818737"><ele>62.0</ele><time>2018-06-16T12:13:07.000Z</time><course>71.4</course><speed>0.52</speed><src>gps</src></trkpt>
+<trkpt lat="-36.23211444" lon="176.32706423"><ele>44.0</ele><time>2018-06-16T12:28:08.000Z</time><course>66.2</course><speed>0.67</speed><src>gps</src></trkpt>
+</trkseg></trk></gpx>
