@@ -6,7 +6,7 @@
     <Platform Condition=" '$(Platform)' == '' ">AnyCPU</Platform>
     <ProjectGuid>{F5DFA4FB-417D-4176-BCF1-DECDC8210846}</ProjectGuid>
     <OutputType>Exe</OutputType>
-    <RootNamespace>GpxParser</RootNamespace>
+    <RootNamespace>HisRoyalRedness.com</RootNamespace>
     <AssemblyName>GpxParser</AssemblyName>
     <TargetFrameworkVersion>v4.6.1</TargetFrameworkVersion>
     <FileAlignment>512</FileAlignment>
@@ -43,9 +43,17 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="Constants.cs" />
     <Compile Include="Extensions.cs" />
+    <Compile Include="GpxFile.cs" />
+    <Compile Include="GpxItem.cs" />
+    <Compile Include="Link.cs" />
     <Compile Include="Program.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
+    <Compile Include="Route.cs" />
+    <Compile Include="Track.cs" />
+    <Compile Include="WayPoint.cs" />
+    <Compile Include="TrackSegment.cs" />
   </ItemGroup>
   <ItemGroup>
     <None Include="App.config" />

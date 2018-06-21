@@ -6,7 +6,7 @@ using System.Threading.Tasks;
 using System.Xml;
 using System.Xml.Linq;
 
-namespace GpxParser
+namespace HisRoyalRedness.com
 {
     internal static class MiscExtensions
     {
