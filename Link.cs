@@ -14,11 +14,11 @@ namespace HisRoyalRedness.com
     {
         public Link(Uri url)
         {
-            Url = url;
+            Url = url ?? throw new ArgumentNullException(nameof(url));
         }
 
-        public string Text { get; private set; }
-        public string Type { get; private set; }
+        public string Text { get; set; }
+        public string Type { get; set; }
         public Uri Url { get; private set; }
 
         public static Link Parse(XElement element)
@@ -33,28 +33,36 @@ namespace HisRoyalRedness.com
                 <xsd:attribute name="href" type="xsd:anyURI" use="required"/>
             </xsd:complexType>
             */
-            var link = new Link(new Uri(element.Attribute(Constants.Link.href).Value));
-            element.SetValueFromElement(Constants.Link.text, val => link.Text = val);
-            element.SetValueFromElement(Constants.Link.type, val => link.Type = val);
+            if (element == null)
+                throw new ArgumentNullException(nameof(element));
+            var ns = element.GetDefaultNamespace();
+            if (ns == null)
+                throw new ArgumentNullException(nameof(ns));
+
+            var link = new Link(new Uri(element.Attribute(_href).Value));
+            element.SetValueFromElement(ns + _text, val => link.Text = val);
+            element.SetValueFromElement(ns + _type, val => link.Type = val);
+
             link.DisplayString = $"{link.Url}. ";
             if (!string.IsNullOrWhiteSpace(link.Text))
                 link.DisplayString += $"Text: {link.Text} ";
             if (!string.IsNullOrWhiteSpace(link.Type))
                 link.DisplayString += $"Type: {link.Type} ";
+
             return link;
         }
 
-        protected override void InternalWrite(XmlWriter writer)
+        protected override void InternalWrite(XmlWriter writer, XNamespace ns)
         {
-            writer.WriteStartElement(Constants.Link.link);
-            writer.WriteAttribute(Constants.Link.href, Url);
-            if (!string.IsNullOrWhiteSpace(Text))
-                writer.WriteElement(Constants.Link.text, Text);
-            if (!string.IsNullOrWhiteSpace(Type))
-                writer.WriteElement(Constants.Link.type, Type);
-            writer.WriteEndElement();
+            writer.WriteAttribute(_href, Url);
+            writer.WriteElement(ns + _text, Text);
+            writer.WriteElement(ns + _type, Type);
         }
 
         string DisplayString { get; set; }
+
+        const string _text = "text";
+        const string _type = "type";
+        const string _href = "href";
     } 
 }

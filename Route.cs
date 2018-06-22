@@ -39,6 +39,9 @@ namespace HisRoyalRedness.com
                 </xsd:sequence>
             </xsd:complexType>
             */
+            if (element == null)
+                throw new ArgumentNullException(nameof(element));
+
             var rte = new Route();
             element.SetValueFromElement(Constants.Route.name, val => rte.Name = val);
             element.SetValueFromElement(Constants.Route.cmt, val => rte.Comment = val);
@@ -55,20 +58,14 @@ namespace HisRoyalRedness.com
         protected override void InternalWrite(XmlWriter writer)
         {
             writer.WriteStartElement(Constants.Route.rte);
-            if (!string.IsNullOrWhiteSpace(Name))
-                writer.WriteElement(Constants.Route.name, Name);
-            if (!string.IsNullOrWhiteSpace(Comment))
-                writer.WriteElement(Constants.Route.cmt, Comment);
-            if (!string.IsNullOrWhiteSpace(Description))
-                writer.WriteElement(Constants.Route.desc, Description);
-            if (!string.IsNullOrWhiteSpace(Source))
-                writer.WriteElement(Constants.Route.src, Source);
+            writer.WriteElement(Constants.Route.name, Name);
+            writer.WriteElement(Constants.Route.cmt, Comment);
+            writer.WriteElement(Constants.Route.desc, Description);
+            writer.WriteElement(Constants.Route.src, Source);
             if (Link != null)
                 Link.Write(writer);
-            if (Number.HasValue)
-                writer.WriteElement(Constants.Route.number, Number.Value);
-            if (!string.IsNullOrWhiteSpace(Type))
-                writer.WriteElement(Constants.Route.type, Type);
+            writer.WriteElement(Constants.Route.number, Number);
+            writer.WriteElement(Constants.Route.type, Type);
             foreach (var rtept in Points)
                 rtept.Write(writer);
             writer.WriteEndElement();

@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
+using System.Reflection;
 using System.Text;
 using System.Threading.Tasks;
 using System.Xml;
@@ -13,10 +14,25 @@ namespace HisRoyalRedness.com
     [DebuggerDisplay("{DisplayString}")]
     public class GpxFile : GpxItem<GpxFile>
     {
+        static GpxFile()
+        {
+            var exeName = Path.GetFileNameWithoutExtension(Assembly.GetExecutingAssembly().Location);
+            var version = FileVersionInfo.GetVersionInfo(Assembly.GetExecutingAssembly().Location)?.FileVersion;
+            _creator = $"{exeName} - {version}";
+        }
+
+        public GpxFile()
+            : this(null, null)
+        { }
+
+        public GpxFile(string creator)
+            : this(null, creator)
+        { }
+
         public GpxFile(string version, string creator)
         {
-            Version = version;
-            Creator = creator;
+            Version = version ?? "1.1";
+            Creator = creator ?? _creator;
             DisplayString = $"{Version}, ${Creator}";
         }
 
@@ -29,6 +45,7 @@ namespace HisRoyalRedness.com
         public string FileName { get; private set; }
         public string Version { get; private set; }
         public string Creator { get; private set; }
+        public Metadata Metadata { get; set; }
         public List<WayPoint> Waypoints { get; } = new List<WayPoint>();
         public List<Route> Routes { get; } = new List<Route>();
         public List<Track> Tracks { get; } = new List<Track>();
@@ -46,6 +63,8 @@ namespace HisRoyalRedness.com
                 <extensions> extensionsType </extensions> [0..1] ?
             </gpx>
             */
+            if (string.IsNullOrWhiteSpace(fileName) || !File.Exists(fileName))
+                throw new FileNotFoundException();
 
             var path = Path.GetFullPath(fileName);
             using (var reader = File.OpenRead(path))
@@ -56,6 +75,7 @@ namespace HisRoyalRedness.com
                     path,
                     element.Attribute(Constants.GpxFile.version).Value,
                     element.Attribute(Constants.GpxFile.creator).Value);
+                element.SetValueFromElement(Constants.GpxFile.metadata, val => Metadata.Parse(val));
                 foreach (var wpt in element.Elements(Constants.GpxFile.wpt))
                     gpx.Waypoints.Add(WayPoint.Parse(wpt));
                 foreach (var rte in element.Elements(Constants.GpxFile.rte))
@@ -73,6 +93,7 @@ namespace HisRoyalRedness.com
             writer.WriteStartElement(Constants.GpxFile.gpx);
             writer.WriteAttribute(Constants.GpxFile.version, Version);
             writer.WriteAttribute(Constants.GpxFile.creator, Creator);
+            writer.WriteElement(Constants.GpxFile.metadata, Metadata);
             foreach (var wpt in Waypoints)
                 wpt.Write(writer);
             foreach (var rte in Routes)
@@ -97,5 +118,6 @@ namespace HisRoyalRedness.com
         }
 
         string DisplayString { get; set; }
+        readonly static string _creator;
     }
 }

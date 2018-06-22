@@ -9,20 +9,8 @@ namespace HisRoyalRedness.com
 {
     internal static class Constants
     {
-        internal readonly static XNamespace topoNs = XNamespace.Get("http://www.topografix.com/GPX/1/0");
-
-        #region Link
-        internal static class Link
-        {
-            // Atributes
-            internal static readonly XName href = "href";
-
-            //Elements
-            internal static readonly XName link = Constants.topoNs + "link";
-            internal static readonly XName text = Constants.topoNs + "text";
-            internal static readonly XName type = Constants.topoNs + "type";
-        }
-        #endregion Link
+        internal readonly static XNamespace topoNs1_1 = XNamespace.Get("http://www.topografix.com/GPX/1/1");
+        internal readonly static XNamespace topoNs1_0 = XNamespace.Get("http://www.topografix.com/GPX/1/0");
 
         #region WayPoint
         internal static class WayPoint
@@ -98,6 +86,36 @@ namespace HisRoyalRedness.com
         }
         #endregion Route
 
+        #region Metadata
+        internal static class Metadata
+        {
+            //Elements
+            internal static readonly XName metadata = Constants.topoNs + "metadata";
+            internal static readonly XName name = Constants.topoNs + "name";
+            internal static readonly XName desc = Constants.topoNs + "desc";
+            internal static readonly XName author = Constants.topoNs + "author";
+            internal static readonly XName copyright = Constants.topoNs + "copyright";
+            internal static readonly XName link = Constants.topoNs + "link";
+            internal static readonly XName time = Constants.topoNs + "time";
+            internal static readonly XName keywords = Constants.topoNs + "keywords";
+            internal static readonly XName bounds = Bounds.bounds;
+        }
+        #endregion Metadata
+
+        #region Bounds
+        internal static class Bounds
+        {
+            // Attributes
+            internal static readonly XName minlat = "minlat";
+            internal static readonly XName minlon = "minlon";
+            internal static readonly XName maxlat = "maxlat";
+            internal static readonly XName maxlon = "maxlon";
+
+            //Elements
+            internal static readonly XName bounds = Constants.topoNs + "bounds";
+        }
+        #endregion Bounds
+
         #region GpxFile
         internal static class GpxFile
         {
@@ -107,6 +125,7 @@ namespace HisRoyalRedness.com
 
             //Elements
             internal static readonly XName gpx = Constants.topoNs + "gpx";
+            internal static readonly XName metadata = Metadata.metadata;
             internal static readonly XName wpt = Constants.topoNs + "wpt";
             internal static readonly XName rte = Constants.topoNs + "rte";
             internal static readonly XName trk = Track.trk;

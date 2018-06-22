@@ -39,7 +39,11 @@ namespace HisRoyalRedness.com
                 </xsd:sequence>
             </xsd:complexType>
             */
+            if (element == null)
+                throw new ArgumentNullException(nameof(element));
+
             var trk = new Track();
+
             element.SetValueFromElement(Constants.Track.name, val => trk.Name = val);
             element.SetValueFromElement(Constants.Track.cmt, val => trk.Comment = val);
             element.SetValueFromElement(Constants.Track.desc, val => trk.Description = val);
@@ -49,26 +53,20 @@ namespace HisRoyalRedness.com
             element.SetValueFromElement(Constants.Track.type, val => trk.Type = val);
             foreach (var trackSegment in element.Elements(Constants.Track.trkseg))
                 trk.Segments.Add(TrackSegment.Parse(trackSegment));
+
             return trk;
         }
 
         protected override void InternalWrite(XmlWriter writer)
         {
             writer.WriteStartElement(Constants.Track.trk);
-            if (!string.IsNullOrWhiteSpace(Name))
-                writer.WriteElement(Constants.Track.name, Name);
-            if (!string.IsNullOrWhiteSpace(Comment))
-                writer.WriteElement(Constants.Track.cmt, Comment);
-            if (!string.IsNullOrWhiteSpace(Description))
-                writer.WriteElement(Constants.Track.desc, Description);
-            if (!string.IsNullOrWhiteSpace(Source))
-                writer.WriteElement(Constants.Track.src, Source);
-            if (Link != null)
-                Link.Write(writer);
-            if (Number.HasValue)
-                writer.WriteElement(Constants.Track.number, Number.Value);
-            if (!string.IsNullOrWhiteSpace(Type))
-                writer.WriteElement(Constants.Track.type, Type);
+            writer.WriteElement(Constants.Track.name, Name);
+            writer.WriteElement(Constants.Track.cmt, Comment);
+            writer.WriteElement(Constants.Track.desc, Description);
+            writer.WriteElement(Constants.Track.src, Source);
+            writer.WriteElement(Constants.Track.link, Link);
+            writer.WriteElement(Constants.Track.number, Number);
+            writer.WriteElement(Constants.Track.type, Type);
             foreach (var trkseg in Segments)
                 trkseg.Write(writer);
             writer.WriteEndElement();

@@ -12,7 +12,7 @@ using System.Xml.Linq;
 namespace HisRoyalRedness.com
 {
     [DebuggerDisplay("{DisplayString}")]
-    public class WayPoint : GpxItem<WayPoint>, IComparable<WayPoint>
+    public class WayPoint : GpxItem<WayPoint>, IComparable<WayPoint>, IEquatable<WayPoint>
     {
         public WayPoint(double latitude, double longitude)
         {
@@ -76,6 +76,9 @@ namespace HisRoyalRedness.com
                 <xsd:attribute name="lon" type="longitudeType" use="required"/>
             </xsd:complexType>
             */
+            if (element == null)
+                throw new ArgumentNullException(nameof(element));
+
             var trkPt = new WayPoint(
                 double.Parse(element.Attribute(Constants.WayPoint.lat).Value),
                 double.Parse(element.Attribute(Constants.WayPoint.lon).Value));
@@ -152,6 +155,7 @@ namespace HisRoyalRedness.com
             writer.WriteEndElement();
         }
 
+        #region IComparable<WayPoint> implementation
         public int CompareTo(WayPoint other)
         {
             if (other == null)
@@ -168,6 +172,23 @@ namespace HisRoyalRedness.com
 
             return 0;
         }
+        #endregion IComparable<WayPoint> implementation
+
+        #region IEquatable<WayPoint> implementation
+        public bool Equals(WayPoint other) => CompareTo(other) == 0;
+        #endregion IEquatable<WayPoint> implementation
+
+        public override bool Equals(object obj) => Equals(obj as WayPoint);
+        public static bool operator==(WayPoint a, WayPoint b)
+        {
+            if (a is null && b is null)
+                return true;
+            if (a is null || b is null)
+                return false;
+            return a.Equals(b);
+        }
+        public static bool operator !=(WayPoint a, WayPoint b) => !(a == b);
+        public override int GetHashCode() => Time.HasValue ? Time.Value.GetHashCode() : 0;
 
         string DisplayString { get; set; }
 

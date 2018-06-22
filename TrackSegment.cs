@@ -26,9 +26,14 @@ namespace HisRoyalRedness.com
                 </xsd:sequence>
             </xsd:complexType>
             */
+            if (element == null)
+                throw new ArgumentNullException(nameof(element));
+
             var trkSeg = new TrackSegment();
+
             foreach (var trackPoint in element.Elements(Constants.TrackSegment.trkpt))
                 trkSeg.Add(WayPoint.Parse(trackPoint, true));
+
             return trkSeg;
         }
 
