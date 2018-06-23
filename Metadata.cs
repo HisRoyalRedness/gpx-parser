@@ -1,9 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Globalization;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 using System.Xml;
 using System.Xml.Linq;
 
@@ -18,10 +15,24 @@ namespace HisRoyalRedness.com
         public string Description { get; set; }
         public Person Author { get; set; }
         public Copyright Copyright { get; set; }
-        public Link Link { get; set; }
-        public DateTime? Time { get; set; }
+        public IEnumerable<Link> Links => _links;
         public string Keywords { get; set; }
         public Bounds Bounds { get; set; }
+
+        public DateTime? Time
+        {
+            get { return _dateTime; }
+            set
+            {
+                if (value.HasValue)
+                {
+                    _dateTime = value.Value.ToUniversalTime();
+                }
+                else
+                    _dateTime = null;
+            }
+        }
+        DateTime? _dateTime = null;
 
         public static Metadata Parse(XElement element)
         {
@@ -48,29 +59,42 @@ namespace HisRoyalRedness.com
                 throw new ArgumentNullException(nameof(ns));
 
             var meta = new Metadata();
-            element.SetValueFromElement(Constants.Metadata.name, val => meta.Name = val);
-            element.SetValueFromElement(Constants.Metadata.desc, val => meta.Description = val);
-            element.SetValueFromElement(Constants.Metadata.author, val => meta.Author = Person.Parse(val));
-            element.SetValueFromElement(Constants.Metadata.copyright, val => meta.Copyright = Copyright.Parse(val));
-            element.SetValueFromElement(Constants.Metadata.link, val => meta.Link = Link.Parse(val));
-            element.SetValueFromElement(Constants.Metadata.time, val => meta.Time = DateTime.Parse(val, CultureInfo.InvariantCulture, DateTimeStyles.AdjustToUniversal));
-            element.SetValueFromElement(Constants.Metadata.keywords, val => meta.Keywords = val);
-            element.SetValueFromElement(Constants.Metadata.bounds, val => Bounds.Parse(val));
+            element.SetValueFromElement(ns + _name, val => meta.Name = val);
+            element.SetValueFromElement(ns + _desc, val => meta.Description = val);
+            element.SetValueFromElement(ns + _author, val => meta.Author = Person.Parse(val));
+            element.SetValueFromElement(ns + _copyright, val => meta.Copyright = Copyright.Parse(val));
+            foreach (var link in element.Elements(ns + _link))
+                meta._links.Add(Link.Parse(link));
+            element.SetValueFromElement(ns + _time, val => meta.Time = DateTime.Parse(val, CultureInfo.InvariantCulture, DateTimeStyles.AdjustToUniversal));
+            element.SetValueFromElement(ns + _keywords, val => meta.Keywords = val);
+            element.SetValueFromElement(ns + _bounds, val => Bounds.Parse(val));
             return meta;
         }
 
         protected override void InternalWrite(XmlWriter writer, XNamespace ns)
         {
-            writer.WriteStartElement(Constants.Metadata.metadata);
-            writer.WriteElement(Constants.Metadata.name, Name);
-            writer.WriteElement(Constants.Metadata.desc, Description);
-            writer.WriteElement(Constants.Metadata.author, Author);
-            writer.WriteElement(Constants.Metadata.copyright, Copyright);
-            writer.WriteElement(Constants.Metadata.link, Link);
-            writer.WriteElement(Constants.Metadata.time, Time);
-            writer.WriteElement(Constants.Metadata.keywords, Keywords);
-            writer.WriteElement(Constants.Metadata.bounds, Bounds);
-            writer.WriteEndElement();
+            writer.WriteElement(ns + _name, Name);
+            writer.WriteElement(ns + _desc, Description);
+            writer.WriteElement(ns + _author, Author);
+            writer.WriteElement(ns + _copyright, Copyright);
+            foreach(var link in _links)
+                writer.WriteElement(ns + _link, link);
+            writer.WriteElement(ns + _time, Time);
+            writer.WriteElement(ns + _keywords, Keywords);
+            writer.WriteElement(ns + _bounds, Bounds);
         }
+
+        public void Add(Link link) => _links.Add(link);
+
+        List<Link> _links = new List<Link>();
+
+        const string _name = "name";
+        const string _desc = "desc";
+        const string _author = "author";
+        const string _copyright = "copyright";
+        const string _link = "link";
+        const string _time = "time";
+        const string _keywords = "keywords";
+        const string _bounds = "bounds";
     }
 }

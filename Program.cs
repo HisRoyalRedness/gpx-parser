@@ -18,7 +18,17 @@ namespace HisRoyalRedness.com
         static void Main(string[] args)
         {
             //Sort(@"Data", "Cruise.gpx");
-            Create();
+            //ChangeToRoute();
+            ChangeToWaypoints();
+            //Create();
+            //Load(@"Data\20180618.gpx");
+        }
+
+        static void Load(string fileName)
+        {
+            var gpx = GpxFile.Load(fileName);
+            gpx.Save("test2.xml");
+            Validate("test2.xml");
         }
 
         static void Create()
@@ -29,30 +39,46 @@ namespace HisRoyalRedness.com
                 {
                     Name = "meta name",
                     Description = "meta desc",
-                    Author = "meta auth",
-                    Copyright = "meta copy",
-                    Link = new Link(new Uri("http://www.hisroyalredness.com"))
+                    Author = new Person()
                     {
-                        Text = "link text",
-                        Type = "link type"
+                        Name = "person name",
+                        Email = new Email("me@email.com"),
+                        Link = new Link(new Uri("http://personlink.com"))
+                        {
+                            Text = "person link text",
+                            Type = "person link type"
+                        }
+                    },
+                    Copyright = new Copyright("copyright author")
+                    {
+                        License = new Uri("http://copyrightlicense.com"),
+                        Year = 2018
                     },
                     Time = DateTime.Now,
                     Keywords = "meta keywords",
                     Bounds = new Bounds(1.0, 2.0, 3.0, 4.0)
                 }
+                .Tap(meta => meta.Add(new Link(new Uri("http://metadatalink1.com"))
+                {
+                    Text = "meta link text 1",
+                    Type = "meta link type 1"
+                }))
+                .Tap(meta => meta.Add(new Link(new Uri("http://metadatalink2.com"))
+                {
+                    Text = "meta link text 2",
+                    Type = "meta link type 2"
+                }))
             };
 
             var fileName = "test.xml";
-            using (var writer = new XmlTextWriter(fileName, Encoding.UTF8))
-                gpx.Write(writer);
-
+            gpx.Save(fileName, true);
             Validate(fileName);
         }
 
         static void Sort(string folder, string targetFile)
         {
             var points = Directory.GetFiles(Path.GetFullPath(folder), "*.gpx")
-                .SelectMany(file => GpxFile.Parse(file).Tracks)
+                .SelectMany(file => GpxFile.Load(file).Tracks)
                 .SelectMany(trk => trk.Segments)
                 .SelectMany(seg => seg.Points)
                 .Distinct();
@@ -61,60 +87,71 @@ namespace HisRoyalRedness.com
             foreach (var trkpt in points)
                 gpx.AddTrackPoint(trkpt);
 
-            var settings = new XmlWriterSettings()
+            gpx.Metadata = new Metadata()
             {
-                Encoding = Encoding.UTF8,
-                Indent = true,
-                IndentChars = "   "
+                Name = "Food & wine cruise, 2018",
+                Author = new Person()
+                {
+                    Name = "Keith Fletcher",
+                    Email = new Email("keith@fletcher.com"),
+                },
+                Copyright = new Copyright("Keith Fletcher")
+                {
+                    Year = 2018
+                },
+                Time = DateTime.Now
             };
-            using (var writer = XmlWriter.Create(Path.GetFullPath(targetFile), settings))
-                gpx.Write(writer);
 
+            gpx.Save(targetFile, true);
             Console.WriteLine();
+        }
+
+        static void ChangeToRoute()
+        {
+            var points = GpxFile.Load("Track.gpx")
+                .Tracks
+                .SelectMany(t => t.Segments)
+                .SelectMany(s => s.Points);
+
+            var gpx = new GpxFile();
+            foreach (var pt in points)
+                gpx.AddRoutePoint(pt);
+            gpx.Save("Route.gpx", true);
+        }
+
+        static void ChangeToWaypoints()
+        {
+            var points = GpxFile.Load("Track.gpx")
+                .Tracks
+                .SelectMany(t => t.Segments)
+                .SelectMany(s => s.Points);
+
+            var gpx = new GpxFile();
+            var i = 1;
+            foreach (var pt in points)
+            {
+                pt.Name = $"My waypoint - {i++}";
+                pt.Description = $"Desc My waypoint - {i++}";
+                gpx.AddWaypoint(pt);
+            }
+            gpx.Save("Waypoints.gpx", true);
         }
 
         static bool Validate(string filename)
         {
-            
-            var schema = new XmlSchemaSet();            
+            var schema = new XmlSchemaSet();
             using (var schemaReader = XmlReader.Create("gpx.xsd"))
                 schema.Add("http://www.topografix.com/GPX/1/1", schemaReader);
             var doc = XDocument.Load(filename);
-            doc.Validate(schema, (o, e) => Console.WriteLine($"{(e.Severity.ToString().ToUpper())}: {e.Message}"));
+            var valid = true;
+            doc.Validate(schema, (o, e) => {
+                valid = false;
+                Console.WriteLine($"{(e.Severity.ToString().ToUpper())}: {e.Message}");
+            });
                
             Console.WriteLine();
-
-            //static void Main(string[] args)
-            //{
-            //    var path = new Uri(Path.GetDirectoryName(System.Reflection.Assembly.GetExecutingAssembly().CodeBase)).LocalPath;
-            //    XmlSchemaSet schema = new XmlSchemaSet();
-            //    schema.Add("", path + "\\input.xsd");
-            //    XmlReader rd = XmlReader.Create(path + "\\input.xml");
-            //    XDocument doc = XDocument.Load(rd);
-            //    doc.Validate(schema, ValidationEventHandler);
-            //}
-            //static void ValidationEventHandler(object sender, ValidationEventArgs e)
-            //{
-            //    XmlSeverityType type = XmlSeverityType.Warning;
-            //    if (Enum.TryParse<XmlSeverityType>("Error", out type))
-            //    {
-            //        if (type == XmlSeverityType.Error) throw new Exception(e.Message);
-            //    }
-            //}
-
-            return false;
+            return valid;
         }
 
     }
-
-    //class WayPointComparer : IEqualityComparer<WayPoint>
-    //{
-    //    public bool Equals(WayPoint x, WayPoint y)
-    //        => x.CompareTo(y) == 0;
-
-    //    public int GetHashCode(WayPoint obj)
-    //    {
-    //        throw new NotImplementedException();
-    //    }
-    //}
 }

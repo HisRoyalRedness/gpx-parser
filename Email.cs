@@ -1,8 +1,4 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 using System.Xml;
 using System.Xml.Linq;
 
@@ -12,6 +8,10 @@ namespace HisRoyalRedness.com
     {
         public Email(string id, string domain)
         {
+            if (string.IsNullOrWhiteSpace(id))
+                throw new ArgumentException($"{nameof(id)} cannot be empty");
+            if (string.IsNullOrWhiteSpace(domain))
+                throw new ArgumentException($"{nameof(domain)} cannot be empty");
             Id = id;
             Domain = domain;
         }
@@ -53,7 +53,7 @@ namespace HisRoyalRedness.com
         protected override void InternalWrite(XmlWriter writer, XNamespace ns)
         {
             writer.WriteAttribute(_id, Id);
-            writer.WriteAttribute(_id, Id);
+            writer.WriteAttribute(_domain, Domain);
         }
 
         const string _id = "id";

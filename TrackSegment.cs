@@ -1,8 +1,5 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 using System.Xml;
 using System.Xml.Linq;
 
@@ -28,25 +25,26 @@ namespace HisRoyalRedness.com
             */
             if (element == null)
                 throw new ArgumentNullException(nameof(element));
+            var ns = element.GetDefaultNamespace();
+            if (ns == null)
+                throw new ArgumentNullException(nameof(ns));
 
             var trkSeg = new TrackSegment();
-
-            foreach (var trackPoint in element.Elements(Constants.TrackSegment.trkpt))
+            foreach (var trackPoint in element.Elements(ns + _trkpt))
                 trkSeg.Add(WayPoint.Parse(trackPoint, true));
-
             return trkSeg;
         }
 
-        protected override void InternalWrite(XmlWriter writer)
+        protected override void InternalWrite(XmlWriter writer, XNamespace ns)
         {
-            writer.WriteStartElement(Constants.TrackSegment.trkseg);
             foreach (var trkpt in Points)
-                trkpt.Write(writer);
-            writer.WriteEndElement();
+                writer.WriteElement(ns + _trkpt, trkpt);
         }
 
         public void Add(WayPoint trkpt) => _points.Add(trkpt.Time.Value, trkpt);
 
         SortedList<DateTime, WayPoint> _points = new SortedList<DateTime, WayPoint>();
+
+        const string _trkpt = "trkpt";
     }
 }

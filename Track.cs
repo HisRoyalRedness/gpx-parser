@@ -1,8 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 using System.Xml;
 using System.Xml.Linq;
 
@@ -17,10 +15,10 @@ namespace HisRoyalRedness.com
         public string Comment { get; private set; }
         public string Description { get; private set; }
         public string Source { get; private set; }
-        public Link Link { get; private set; }
+        public IEnumerable<Link> Links => _links;
         public int? Number { get; private set; }
         public string Type { get; private set; }
-        public List<TrackSegment> Segments { get; } = new List<TrackSegment>();
+        public IEnumerable<TrackSegment> Segments => _trackSegments;
 
         public static Track Parse(XElement element)
         {
@@ -41,46 +39,60 @@ namespace HisRoyalRedness.com
             */
             if (element == null)
                 throw new ArgumentNullException(nameof(element));
+            var ns = element.GetDefaultNamespace();
+            if (ns == null)
+                throw new ArgumentNullException(nameof(ns));
 
             var trk = new Track();
-
-            element.SetValueFromElement(Constants.Track.name, val => trk.Name = val);
-            element.SetValueFromElement(Constants.Track.cmt, val => trk.Comment = val);
-            element.SetValueFromElement(Constants.Track.desc, val => trk.Description = val);
-            element.SetValueFromElement(Constants.Track.src, val => trk.Source = val);
-            element.SetValueFromElement(Constants.Track.link, val => trk.Link = Link.Parse(val));
-            element.SetValueFromElement(Constants.Track.number, val => trk.Number = int.Parse(val));
-            element.SetValueFromElement(Constants.Track.type, val => trk.Type = val);
-            foreach (var trackSegment in element.Elements(Constants.Track.trkseg))
-                trk.Segments.Add(TrackSegment.Parse(trackSegment));
-
+            element.SetValueFromElement(ns + _name, val => trk.Name = val);
+            element.SetValueFromElement(ns + _cmt, val => trk.Comment = val);
+            element.SetValueFromElement(ns + _desc, val => trk.Description = val);
+            element.SetValueFromElement(ns + _src, val => trk.Source = val);
+            foreach (var link in element.Elements(ns + _link))
+                trk.Add(Link.Parse(link));
+            element.SetValueFromElement(ns + _number, val => trk.Number = int.Parse(val));
+            element.SetValueFromElement(ns + _type, val => trk.Type = val);
+            foreach (var trackSegment in element.Elements(ns + _trkseg))
+                trk.Add(TrackSegment.Parse(trackSegment));
             return trk;
         }
 
-        protected override void InternalWrite(XmlWriter writer)
+        protected override void InternalWrite(XmlWriter writer, XNamespace ns)
         {
-            writer.WriteStartElement(Constants.Track.trk);
-            writer.WriteElement(Constants.Track.name, Name);
-            writer.WriteElement(Constants.Track.cmt, Comment);
-            writer.WriteElement(Constants.Track.desc, Description);
-            writer.WriteElement(Constants.Track.src, Source);
-            writer.WriteElement(Constants.Track.link, Link);
-            writer.WriteElement(Constants.Track.number, Number);
-            writer.WriteElement(Constants.Track.type, Type);
+            writer.WriteElement(ns + _name, Name);
+            writer.WriteElement(ns + _cmt, Comment);
+            writer.WriteElement(ns + _desc, Description);
+            writer.WriteElement(ns + _src, Source);
+            foreach (var link in _links)
+                writer.WriteElement(_link, link);
+            writer.WriteElement(ns + _number, Number);
+            writer.WriteElement(ns + _type, Type);
             foreach (var trkseg in Segments)
-                trkseg.Write(writer);
-            writer.WriteEndElement();
+                writer.WriteElement(ns + _trkseg, trkseg);
         }
 
-        public void Add(TrackSegment seg) => Segments.Add(seg);
+        public void Add(TrackSegment seg) => _trackSegments.Add(seg);
         public void Add(WayPoint trkpt) => GetLastTrackSegment().Add(trkpt);
+        public void Add(Link link) => _links.Add(link);
 
         internal TrackSegment GetLastTrackSegment()
         {
-            if (Segments.Count == 0)
+            if (_trackSegments.Count == 0)
                 Add(new TrackSegment());
-            return Segments.Last();
+            return _trackSegments.Last();
         }
+
+        List<Link> _links = new List<Link>();
+        List<TrackSegment> _trackSegments = new List<TrackSegment>();
+
+        const string _name = "name";
+        const string _cmt = "cmt";
+        const string _desc = "desc";
+        const string _src = "src";
+        const string _link = "link";
+        const string _number = "number";
+        const string _type = "type";
+        const string _trkseg = "trkseg";
 
     }
 }

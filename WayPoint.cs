@@ -3,9 +3,6 @@ using System.Collections.Generic;
 using System.ComponentModel;
 using System.Diagnostics;
 using System.Globalization;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 using System.Xml;
 using System.Xml.Linq;
 
@@ -20,28 +17,41 @@ namespace HisRoyalRedness.com
             Longitude = longitude;
         }
 
-        public double Latitude { get; private set; }
-        public double Longitude { get; private set; }
+        public double? Latitude { get; private set; }
+        public double? Longitude { get; private set; }
         public double? Elevation { get; private set; }
-        public DateTime? Time { get; private set; }
         public double? MagneticVariation { get; private set; }
         public double? GeoidHeight { get; private set; }
+        public DateTime? Time
+        {
+            get { return _dateTime; }
+            set
+            {
+                if (value.HasValue)
+                {
+                    _dateTime = value.Value.ToUniversalTime();
+                }
+                else
+                    _dateTime = null;
+            }
+        }
+        DateTime? _dateTime = null;
 
-        public string Name { get; private set; }
-        public string Comment { get; private set; }
-        public string Description { get; private set; }
-        public string Source { get; private set; }
-        public Link Link { get; private set; }
-        public string SymbolName { get; private set; }
-        public string Type { get; private set; }
+        public string Name { get; set; }
+        public string Comment { get; set; }
+        public string Description { get; set; }
+        public string Source { get; set; }
+        public IEnumerable<Link> Links => _links;
+        public string SymbolName { get; set; }
+        public string Type { get; set; }
 
-        public FixTypes FixType { get; private set; }
-        public int? Satellites { get; private set; }
-        public decimal? HorizontalDilutionOfPrecision { get; private set; }
-        public decimal? VerticalDilutionOfPrecision { get; private set; }
-        public decimal? PositionDilutionOfPrecision { get; private set; }
-        public decimal? AgeOfDgpsData { get; private set; }
-        public int? DgpsId { get; private set; }
+        public FixTypes FixType { get; set; }
+        public int? Satellites { get; set; }
+        public decimal? HorizontalDilutionOfPrecision { get; set; }
+        public decimal? VerticalDilutionOfPrecision { get; set; }
+        public decimal? PositionDilutionOfPrecision { get; set; }
+        public decimal? AgeOfDgpsData { get; set; }
+        public int? DgpsId { get; set; }
 
         public static WayPoint Parse(XElement element, bool requireTime = false)
         {
@@ -78,81 +88,70 @@ namespace HisRoyalRedness.com
             */
             if (element == null)
                 throw new ArgumentNullException(nameof(element));
+            var ns = element.GetDefaultNamespace();
+            if (ns == null)
+                throw new ArgumentNullException(nameof(ns));
 
             var trkPt = new WayPoint(
-                double.Parse(element.Attribute(Constants.WayPoint.lat).Value),
-                double.Parse(element.Attribute(Constants.WayPoint.lon).Value));
+                double.Parse(element.Attribute(_lat).Value),
+                double.Parse(element.Attribute(_lon).Value));
 
             // Position info
-            element.SetValueFromElement(Constants.WayPoint.ele, val => trkPt.Elevation = double.Parse(val));
-            element.SetValueFromElement(Constants.WayPoint.time, val => trkPt.Time = DateTime.Parse(val, CultureInfo.InvariantCulture, DateTimeStyles.AdjustToUniversal));
-            element.SetValueFromElement(Constants.WayPoint.magvar, val => trkPt.MagneticVariation = double.Parse(val));
-            element.SetValueFromElement(Constants.WayPoint.geoidheight, val => trkPt.GeoidHeight = double.Parse(val));
+            element.SetValueFromElement(ns + _ele, val => trkPt.Elevation = double.Parse(val));
+            element.SetValueFromElement(ns + _time, val => trkPt.Time = DateTime.Parse(val, CultureInfo.InvariantCulture, DateTimeStyles.AdjustToUniversal));
+            element.SetValueFromElement(ns + _magvar, val => trkPt.MagneticVariation = double.Parse(val));
+            element.SetValueFromElement(ns + _geoidheight, val => trkPt.GeoidHeight = double.Parse(val));
 
             if (requireTime && !trkPt.Time.HasValue)
                 throw new ApplicationException($"{nameof(WayPoint)} requires a {nameof(WayPoint.Time)} value.");
 
             // Description info
-            element.SetValueFromElement(Constants.WayPoint.name, val => trkPt.Name = val);
-            element.SetValueFromElement(Constants.WayPoint.cmt, val => trkPt.Comment = val);
-            element.SetValueFromElement(Constants.WayPoint.desc, val => trkPt.Description = val);
-            element.SetValueFromElement(Constants.WayPoint.src, val => trkPt.Source = val);
-            element.SetValueFromElement(Constants.WayPoint.link, val => trkPt.Link = Link.Parse(val));
-            element.SetValueFromElement(Constants.WayPoint.sym, val => trkPt.SymbolName = val);
-            element.SetValueFromElement(Constants.WayPoint.type, val => trkPt.Type = val);
+            element.SetValueFromElement(ns + _name, val => trkPt.Name = val);
+            element.SetValueFromElement(ns + _cmt, val => trkPt.Comment = val);
+            element.SetValueFromElement(ns + _desc, val => trkPt.Description = val);
+            element.SetValueFromElement(ns + _src, val => trkPt.Source = val);
+            foreach (var link in element.Elements(ns + _link))
+                trkPt.Add(Link.Parse(link));
+            element.SetValueFromElement(ns + _sym, val => trkPt.SymbolName = val);
+            element.SetValueFromElement(ns + _type, val => trkPt.Type = val);
 
             // Accuracy info
-            var fixType = "";
-            element.SetValueFromElement(Constants.WayPoint.fix, val => fixType = val);
-            switch (fixType?.ToLower())
-            {
-                case _fixNone: trkPt.FixType = FixTypes.None; break;
-                case _fix2d: trkPt.FixType = FixTypes.TwoD; break;
-                case _fix3d: trkPt.FixType = FixTypes.ThreeD; break;
-                case _fixDgps: trkPt.FixType = FixTypes.DGps; break;
-                case _fixPps: trkPt.FixType = FixTypes.Pps; break;
-                default: trkPt.FixType = FixTypes.NotSet; break;
-            }
-            element.SetValueFromElement(Constants.WayPoint.sat, val => trkPt.Satellites = int.Parse(val));
-            element.SetValueFromElement(Constants.WayPoint.hdop, val => trkPt.HorizontalDilutionOfPrecision = decimal.Parse(val));
-            element.SetValueFromElement(Constants.WayPoint.vdop, val => trkPt.VerticalDilutionOfPrecision = decimal.Parse(val));
-            element.SetValueFromElement(Constants.WayPoint.pdop, val => trkPt.PositionDilutionOfPrecision = decimal.Parse(val));
-            element.SetValueFromElement(Constants.WayPoint.ageofdgpsdata, val => trkPt.AgeOfDgpsData = decimal.Parse(val));
-            element.SetValueFromElement(Constants.WayPoint.dgpsid, val => trkPt.DgpsId = int.Parse(val));
+            element.SetValueFromElement(ns + _fix, val => trkPt.FixType = StringToFixType(val));
+            element.SetValueFromElement(ns + _sat, val => trkPt.Satellites = int.Parse(val));
+            element.SetValueFromElement(ns + _hdop, val => trkPt.HorizontalDilutionOfPrecision = decimal.Parse(val));
+            element.SetValueFromElement(ns + _vdop, val => trkPt.VerticalDilutionOfPrecision = decimal.Parse(val));
+            element.SetValueFromElement(ns + _pdop, val => trkPt.PositionDilutionOfPrecision = decimal.Parse(val));
+            element.SetValueFromElement(ns + _ageofdgpsdata, val => trkPt.AgeOfDgpsData = decimal.Parse(val));
+            element.SetValueFromElement(ns + _dgpsid, val => trkPt.DgpsId = int.Parse(val));
 
             trkPt.DisplayString = $"{trkPt.Latitude}, {trkPt.Longitude}";
 
             return trkPt;
         }
 
-        protected override void InternalWrite(XmlWriter writer)
+        protected override void InternalWrite(XmlWriter writer, XNamespace ns)
         {
-            writer.WriteStartElement(Constants.WayPoint.trkpt);
-            writer.WriteAttribute(Constants.WayPoint.lat, Latitude);
-            writer.WriteAttribute(Constants.WayPoint.lon, Longitude);
-            if (Elevation.HasValue)
-                writer.WriteElement(Constants.WayPoint.ele, Elevation);
-            if (Time.HasValue)
-                writer.WriteElement(Constants.WayPoint.time, Time);
-            if (MagneticVariation.HasValue)
-                writer.WriteElement(Constants.WayPoint.magvar, MagneticVariation);
-            if (GeoidHeight.HasValue)
-                writer.WriteElement(Constants.WayPoint.geoidheight, GeoidHeight);
-            if (!string.IsNullOrWhiteSpace(Name))
-                writer.WriteElement(Constants.WayPoint.name, Name);
-            if (!string.IsNullOrWhiteSpace(Comment))
-                writer.WriteElement(Constants.WayPoint.cmt, Comment);
-            if (!string.IsNullOrWhiteSpace(Description))
-                writer.WriteElement(Constants.WayPoint.desc, Description);
-            if (!string.IsNullOrWhiteSpace(Source))
-                writer.WriteElement(Constants.WayPoint.src, Source);
-            if (Link != null)
-                Link.Write(writer);
-            if (!string.IsNullOrWhiteSpace(SymbolName))
-                writer.WriteElement(Constants.WayPoint.sym, SymbolName);
-            if (!string.IsNullOrWhiteSpace(Type))
-                writer.WriteElement(Constants.WayPoint.type, Type);
-            writer.WriteEndElement();
+            writer.WriteAttribute(_lat, Latitude);
+            writer.WriteAttribute(_lon, Longitude);
+            writer.WriteElement(ns + _ele, Elevation);
+            writer.WriteElement(ns + _time, Time);
+            writer.WriteElement(ns + _magvar, MagneticVariation);
+            writer.WriteElement(ns + _geoidheight, GeoidHeight);
+            writer.WriteElement(ns + _name, Name);
+            writer.WriteElement(ns + _cmt, Comment);
+            writer.WriteElement(ns + _desc, Description);
+            writer.WriteElement(ns + _src, Source);
+            foreach (var link in _links)
+                writer.WriteElement(_link, link);
+            writer.WriteElement(ns + _sym, SymbolName);
+            writer.WriteElement(ns + _type, Type);
+            writer.WriteElement(ns + _fix, FixTypeToString(FixType));
+            writer.WriteElement(ns + _sat, Satellites);
+            writer.WriteElement(ns + _hdop, HorizontalDilutionOfPrecision);
+            writer.WriteElement(ns + _vdop, VerticalDilutionOfPrecision);
+            writer.WriteElement(ns + _pdop, PositionDilutionOfPrecision);
+            writer.WriteElement(ns + _ageofdgpsdata, AgeOfDgpsData);
+            writer.WriteElement(ns + _dgpsid, DgpsId);
         }
 
         #region IComparable<WayPoint> implementation
@@ -192,6 +191,11 @@ namespace HisRoyalRedness.com
 
         string DisplayString { get; set; }
 
+        public void Add(Link link) => _links.Add(link);
+
+        List<Link> _links = new List<Link>();
+
+        #region FixTypes
         public enum FixTypes
         {
             NotSet,
@@ -203,6 +207,57 @@ namespace HisRoyalRedness.com
             DGps,
             Pps
         }
+
+        static FixTypes StringToFixType(string fixType)
+        {
+            switch (fixType?.ToLower())
+            {
+                case _fixNone: return FixTypes.None;
+                case _fix2d: return FixTypes.TwoD;
+                case _fix3d: return FixTypes.ThreeD;
+                case _fixDgps: return FixTypes.DGps;
+                case _fixPps: return FixTypes.Pps;
+                default: return FixTypes.NotSet;
+            }
+        }
+
+        static string FixTypeToString(FixTypes fixType)
+        {
+            switch (fixType)
+            {
+                case FixTypes.None: return _fixNone;
+                case FixTypes.TwoD: return _fix2d;
+                case FixTypes.ThreeD: return _fix3d;
+                case FixTypes.DGps: return _fixDgps;
+                case FixTypes.Pps: return _fixPps;
+                default: return null;
+            }
+        }
+        #endregion FixTypes
+
+        const string _lat = "lat";
+        const string _lon = "lon";
+
+        const string _ele = "ele";
+        const string _time = "time";
+        const string _magvar = "magvar";
+        const string _geoidheight = "geoidheight";
+
+        const string _name = "name";
+        const string _cmt = "cmt";
+        const string _desc = "desc";
+        const string _src = "src";
+        const string _link = "link";
+        const string _sym = "sym";
+        const string _type = "type";
+
+        const string _fix = "fix";
+        const string _sat = "sat";
+        const string _hdop = "hdop";
+        const string _vdop = "vdop";
+        const string _pdop = "pdop";
+        const string _ageofdgpsdata = "ageofdgpsdata";
+        const string _dgpsid = "dgpsid";
 
         const string _fixNone = "none";
         const string _fix2d = "2d";

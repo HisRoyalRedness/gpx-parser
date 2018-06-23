@@ -1,8 +1,5 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 using System.Xml;
 using System.Xml.Linq;
 
@@ -17,7 +14,7 @@ namespace HisRoyalRedness.com
         public string Comment { get; private set; }
         public string Description { get; private set; }
         public string Source { get; private set; }
-        public Link Link { get; private set; }
+        public IEnumerable<Link> Links => _links;
         public int? Number { get; private set; }
         public string Type { get; private set; }
         public IEnumerable<WayPoint> Points => _points;
@@ -41,39 +38,51 @@ namespace HisRoyalRedness.com
             */
             if (element == null)
                 throw new ArgumentNullException(nameof(element));
+            var ns = element.GetDefaultNamespace();
+            if (ns == null)
+                throw new ArgumentNullException(nameof(ns));
 
             var rte = new Route();
-            element.SetValueFromElement(Constants.Route.name, val => rte.Name = val);
-            element.SetValueFromElement(Constants.Route.cmt, val => rte.Comment = val);
-            element.SetValueFromElement(Constants.Route.desc, val => rte.Description = val);
-            element.SetValueFromElement(Constants.Route.src, val => rte.Source = val);
-            element.SetValueFromElement(Constants.Route.link, val => rte.Link = Link.Parse(val));
-            element.SetValueFromElement(Constants.Route.number, val => rte.Number = int.Parse(val));
-            element.SetValueFromElement(Constants.Route.type, val => rte.Type = val);
-            foreach (var rtept in element.Elements(Constants.Route.rtept))
+            element.SetValueFromElement(ns + _name, val => rte.Name = val);
+            element.SetValueFromElement(ns + _cmt, val => rte.Comment = val);
+            element.SetValueFromElement(ns + _desc, val => rte.Description = val);
+            element.SetValueFromElement(ns + _src, val => rte.Source = val);
+            foreach (var link in element.Elements(ns + _link))
+                rte.Add(Link.Parse(link));
+            element.SetValueFromElement(ns + _number, val => rte.Number = int.Parse(val));
+            element.SetValueFromElement(ns + _type, val => rte.Type = val);
+            foreach (var rtept in element.Elements(ns + _rtept))
                 rte.Add(WayPoint.Parse(rtept));
             return rte;
         }
 
-        protected override void InternalWrite(XmlWriter writer)
+        protected override void InternalWrite(XmlWriter writer, XNamespace ns)
         {
-            writer.WriteStartElement(Constants.Route.rte);
-            writer.WriteElement(Constants.Route.name, Name);
-            writer.WriteElement(Constants.Route.cmt, Comment);
-            writer.WriteElement(Constants.Route.desc, Description);
-            writer.WriteElement(Constants.Route.src, Source);
-            if (Link != null)
-                Link.Write(writer);
-            writer.WriteElement(Constants.Route.number, Number);
-            writer.WriteElement(Constants.Route.type, Type);
-            foreach (var rtept in Points)
-                rtept.Write(writer);
-            writer.WriteEndElement();
+            writer.WriteElement(ns + _name, Name);
+            writer.WriteElement(ns + _cmt, Comment);
+            writer.WriteElement(ns + _desc, Description);
+            writer.WriteElement(ns + _src, Source);
+            foreach (var link in _links)
+                writer.WriteElement(_link, link);
+            writer.WriteElement(ns + _number, Number);
+            writer.WriteElement(ns + _type, Type);
+            foreach (var rtept in _points)
+                writer.WriteElement(_rtept, rtept);
         }
 
         public void Add(WayPoint trkpt) => _points.Add(trkpt);
+        public void Add(Link link) => _links.Add(link);
 
         List<WayPoint> _points = new List<WayPoint>();
+        List<Link> _links = new List<Link>();
 
+        const string _name = "name";
+        const string _cmt = "cmt";
+        const string _desc = "desc";
+        const string _src = "src";
+        const string _link = "link";
+        const string _number = "number";
+        const string _type = "type";
+        const string _rtept = "rtept";
     }
 }

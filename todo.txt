@@ -1,0 +1,11 @@
+Bounds.cs             | **
+Copyright.cs          | **
+Email.cs              | **
+GpxFile.cs            | **
+Link.cs               | **
+Metadata.cs           | **
+Person.cs             | **
+Route.cs              | **
+Track.cs              | **
+TrackSegment.cs       | **
+WayPoint.cs           | **

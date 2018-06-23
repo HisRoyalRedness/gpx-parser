@@ -1,9 +1,4 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Globalization;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 using System.Xml;
 using System.Xml.Linq;
 
@@ -19,10 +14,10 @@ namespace HisRoyalRedness.com
             MaximumLongitude = maxLon;
         }
 
-        public double MinimumLatitude { get; private set; }
-        public double MaximumLatitude { get; private set; }
-        public double MinimumLongitude { get; private set; }
-        public double MaximumLongitude { get; private set; }
+        public double? MinimumLatitude { get; private set; }
+        public double? MaximumLatitude { get; private set; }
+        public double? MinimumLongitude { get; private set; }
+        public double? MaximumLongitude { get; private set; }
 
         public static Bounds Parse(XElement element)
         {
@@ -38,20 +33,23 @@ namespace HisRoyalRedness.com
                 throw new ArgumentNullException(nameof(element));
 
             return new Bounds(
-                double.Parse(element.Attribute(Constants.Bounds.minlat).Value),
-                double.Parse(element.Attribute(Constants.Bounds.minlon).Value),
-                double.Parse(element.Attribute(Constants.Bounds.maxlat).Value),
-                double.Parse(element.Attribute(Constants.Bounds.maxlon).Value));
+                double.Parse(element.Attribute(_minlat).Value),
+                double.Parse(element.Attribute(_minlon).Value),
+                double.Parse(element.Attribute(_maxlat).Value),
+                double.Parse(element.Attribute(_maxlon).Value));
         }
 
-        protected override void InternalWrite(XmlWriter writer)
+        protected override void InternalWrite(XmlWriter writer, XNamespace ns)
         {
-            writer.WriteStartElement(Constants.Bounds.bounds);
-            writer.WriteAttribute(Constants.Bounds.minlat, MinimumLatitude);
-            writer.WriteAttribute(Constants.Bounds.minlon, MinimumLongitude);
-            writer.WriteAttribute(Constants.Bounds.maxlat, MaximumLatitude);
-            writer.WriteAttribute(Constants.Bounds.maxlon, MaximumLongitude);
-            writer.WriteEndElement();
+            writer.WriteAttribute(_minlat, MinimumLatitude);
+            writer.WriteAttribute(_minlon, MinimumLongitude);
+            writer.WriteAttribute(_maxlat, MaximumLatitude);
+            writer.WriteAttribute(_maxlon, MaximumLongitude);
         }
+
+        const string _minlat = "minlat";
+        const string _minlon = "minlon";
+        const string _maxlat = "maxlat";
+        const string _maxlon = "maxlon";
     }
 }
